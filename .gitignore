@@ -85,3 +85,24 @@
 # Don't ignore App.tsx file
 !App.tsx
 
+# Explicitly ignore all the other files you listed:
+.eslintrc.js
+.gitignore
+.prettierrc.js
+.watchmanconfig
+Gemfile
+README.md
+app.json
+babel.config.js
+index.js
+jest.config.js
+metro.config.js
+package-lock.json
+package.json
+tsconfig.json
+
+# If you have other folders that should also be excluded, add them here
+android/
+ios/
+bundle/
+test/
