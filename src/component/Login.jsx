@@ -3,45 +3,66 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigation = useNavigation();
-  const [userData, setUserData] = useState(null); // State to hold student data
+  const [userData, setUserData] = useState(null); 
+  const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
-    if(!password || !email){
-      return Alert.alert("Please fill all details!");
+
+    if (!password && !email) {
+      Toast.show({
+        type: 'error',  
+        text1: 'Login Failed!',
+        text2: `Please fill all details!`,
+        visibilityTime: 2500,
+      });
+      return; 
     }
+
+    setLoading(true);
     try {
-      const response = await axios.post('http://192.168.18.227:3000/api/auth/login', {
+      const response = await axios.post('http://192.168.18.235:3000/api/auth/login', {
         email,
         password,
       });
 
       if (response.status === 200) {
-        // Assuming the backend sends a token or user data upon successful login
-        console.log('Login Successful:', response.data);
-        console.log("User role is:",response.data.user.role);
         await AsyncStorage.setItem('token', response.data.token);
-        console.log('Token saved!');
+        await AsyncStorage.setItem('name', response.data.user.name);
+
+        Toast.show({
+          type: 'success',
+          text1: 'Login Successful',
+          text2: `Welcome back, ${response.data.user.name || 'User'}!`,
+          visibilityTime: 2500,
+        });
 
         if(response.data.user.role=='Student'){
-          navigation.navigate('Main'); // Navigate to the Student screen upon success
+          navigation.navigate('Main'); 
         }
         else if(response.data.user.role=='Mess'){
-          navigation.navigate('Main2'); // Navigate to the Mess screen upon success
+          navigation.navigate('Main2');
         }
         else{
           navigation.navigate("Login");
         }
       }
     } catch (error) {
-      console.error('Login Failed:', error.response?.data || error.message);
-      Alert.alert('Login Failed', error.response?.data?.message || 'An error occurred. Please try again.');
-      // navigation.navigate('Loginn'); // 
+      Toast.show({
+        type: 'error',
+        text1: 'Login Failed',
+        text2: error.response?.data?.message || 'An error occurred. Please try again.',
+        visibilityTime: 3000,
+      }); 
+    }
+    finally {
+      setLoading(false);
     }
   };
 
@@ -77,8 +98,14 @@ const LoginPage = () => {
         <Text style={styles.linkTextBold}>Sign Up</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleSignIn}>
-        <Text style={styles.buttonText}>Sign In</Text>
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonLoading]}
+        onPress={handleSignIn}
+        disabled={loading} 
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Signing In...' : 'Sign In'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -135,6 +162,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  buttonLoading: {
+    backgroundColor: '#4e2cbf',
   },
 });
 

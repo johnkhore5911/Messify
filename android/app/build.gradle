@@ -2,6 +2,7 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+apply plugin: 'com.google.gms.google-services'
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -126,18 +127,9 @@ dependencies {
     implementation("com.facebook.react:react-android")
     implementation project(':react-native-vector-icons')
 
-
-    implementation 'com.google.firebase:firebase-messaging:23.1.1'  // or the latest version
-    implementation 'com.google.firebase:firebase-core:21.1.0' // or the latest version
-
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
-    }
-
-    // Exclude the support-compat dependency if it exists
-    implementation ('com.android.support:support-compat:27.1.1') {
-        exclude group: 'androidx.core', module: 'core'
     }
 }

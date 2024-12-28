@@ -1,44 +1,54 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Image } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 
 const StudentHistory = () => {
   const route = useRoute();
   const { History } = route.params;
 
-  // Reverse the History array to show the latest first
   const reversedHistory = [...History].reverse();
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollView}>
-        {reversedHistory.map((historyItem, index) => (
-          <View key={index} style={styles.historyItem}>
-            <Text style={styles.actionText}>{historyItem.action}</Text>
-            <Text style={styles.dateText}>{new Date(historyItem.date).toLocaleString()}</Text>
+      {reversedHistory.length > 0 ? (
+        <ScrollView contentContainerStyle={styles.scrollView}>
+          {reversedHistory.map((historyItem, index) => (
+            <View key={index} style={styles.historyItem}>
+              <Text style={styles.actionText}>{historyItem.action}</Text>
+              <Text style={styles.dateText}>{new Date(historyItem.date).toLocaleString()}</Text>
 
-            <View style={styles.billDetails}>
-              <Text style={styles.billLabel}>Previous Bill: <Text style={styles.billValue}>₹{historyItem.previousBill}</Text></Text>
-              <Text style={styles.billLabel}>New Bill: <Text style={styles.billValue}>₹{historyItem.newBill}</Text></Text>
-            </View>
-
-            <Text style={styles.amountText}>Amount Added: <Text style={styles.amountValue}>₹{historyItem.amount}</Text></Text>
-
-            {historyItem.items.length > 0 && (
-              <View style={styles.itemsContainer}>
-                <Text style={styles.itemsHeader}>Items:</Text>
-                {historyItem.items.map((item, itemIndex) => (
-                  <Text key={itemIndex} style={styles.itemText}>
-                    {item.item} - ₹{item.price}
-                  </Text>
-                ))}
+              <View style={styles.billDetails}>
+                <Text style={styles.billLabel}>
+                  Previous Bill: <Text style={styles.billValue}>₹{historyItem.previousBill}</Text>
+                </Text>
+                <Text style={styles.billLabel}>
+                  New Bill: <Text style={styles.billValue}>₹{historyItem.newBill}</Text>
+                </Text>
               </View>
-            )}
 
-            {/* <Text style={styles.descriptionText}>{historyItem.description}</Text> */}
-          </View>
-        ))}
-      </ScrollView>
+              <Text style={styles.amountText}>
+                Amount Added: <Text style={styles.amountValue}>₹{historyItem.amount}</Text>
+              </Text>
+
+              {historyItem.items.length > 0 && (
+                <View style={styles.itemsContainer}>
+                  <Text style={styles.itemsHeader}>Items:</Text>
+                  {historyItem.items.map((item, itemIndex) => (
+                    <Text key={itemIndex} style={styles.itemText}>
+                      {item.item} - ₹{item.price}
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No history available</Text>
+          <Text style={styles.emptySubText}>Your History will appear here when your meal is Ordered.</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -48,14 +58,14 @@ export default StudentHistory;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // Dark background for the page
+    backgroundColor: '#121212', 
     padding: 16,
   },
   scrollView: {
     paddingBottom: 20,
   },
   historyItem: {
-    backgroundColor: '#1e1e1e', // Dark card for each history item
+    backgroundColor: '#1e1e1e', 
     marginBottom: 16,
     padding: 16,
     borderRadius: 10,
@@ -106,9 +116,27 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginVertical: 4,
   },
-  descriptionText: {
-    fontSize: 14,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  emptyImage: {
+    width: 150,
+    height: 150,
+    marginBottom: 20,
+  },
+  emptyText: {
+    fontSize: 20,
+    color: '#ffffff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  emptySubText: {
+    fontSize: 16,
     color: '#bbbbbb',
-    marginVertical: 8,
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

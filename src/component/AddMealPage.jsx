@@ -14,17 +14,15 @@ import { useNavigation } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 
 const TodayMealPage = () => {
-  const [meals, setMeals] = useState([]); // State to store meal items
+  const [meals, setMeals] = useState([]); 
   const navigation = useNavigation();
   const route = useRoute();
   const {messNumber} = route.params;
 
-  // Function to add a new meal input
   const handleAddMeal = () => {
     setMeals([...meals, { itemName: '', price: '' }]);
   };
 
-  // Function to update meal details
   const handleMealChange = (index, field, value) => {
     const updatedMeals = [...meals];
     updatedMeals[index][field] = value;
@@ -32,23 +30,16 @@ const TodayMealPage = () => {
   };
 
 
-  // Function to delete a meal
   const handleDeleteMeal = (index) => {
     const updatedMeals = meals.filter((_, i) => i !== index);
     setMeals(updatedMeals);
   };
 
-  // Function to handle update button click
   const handleUpdate = async() => {
-
-    // const updatedMeals = meals.map(meal => ({
-    //   ...meal,
-    //   price: parseFloat(meal.price), // Convert price to a number
-    // }));
     const updatedMeals = meals.map(meal => ({
       ...meal,
-      itemName: meal.itemName.trimEnd(), // Remove trailing spaces
-      price: parseFloat(meal.price), // Convert price to a number
+      itemName: meal.itemName.trimEnd(), 
+      price: parseFloat(meal.price), 
     }));
     const data ={
       hostelNumber: messNumber,
@@ -58,7 +49,7 @@ const TodayMealPage = () => {
     try{
       const token = await AsyncStorage.getItem('token');
       console.log("token: ",token);
-      const response = await axios.post("https://messify-backend.vercel.app/api/auth/updateTodaysMeal",
+      const response = await axios.post("http://192.168.18.235:3000/api/auth/updateTodaysMeal",
       data,
       {
         headers: {
@@ -81,16 +72,14 @@ const TodayMealPage = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <Text style={styles.header}>Mess Stuff</Text>
 
-      {/* Meal Inputs */}
       <ScrollView style={styles.mealList}>
         <Text style={styles.label}>Today's Meal</Text>
         {meals.map((meal, index) => (
           <View key={index} style={styles.mealRow}>
             <TextInput
-              style={[styles.input, { flex: 3 }]} // Wider input for item name
+              style={[styles.input, { flex: 3 }]} 
               placeholder="Meal Name"
               placeholderTextColor="#aaa"
               value={meal.itemName}
@@ -99,7 +88,7 @@ const TodayMealPage = () => {
               }
             />
             <TextInput
-              style={[styles.input, { flex: 1 }]} // Narrower input for price
+              style={[styles.input, { flex: 1 }]} 
               placeholder="Price"
               placeholderTextColor="#aaa"
               keyboardType="numeric"
@@ -115,13 +104,11 @@ const TodayMealPage = () => {
           </View>
         ))}
 
-        {/* Add Meal Button */}
         <TouchableOpacity style={styles.addButton} onPress={handleAddMeal}>
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Update Button */}
       <TouchableOpacity style={styles.updateButton} onPress={handleUpdate}>
         <Text style={styles.updateButtonText}>Update</Text>
       </TouchableOpacity>
@@ -166,7 +153,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   deleteButton: {
-    backgroundColor: '#e53935', // Red color
+    backgroundColor: '#e53935', 
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 5,
@@ -178,7 +165,7 @@ const styles = StyleSheet.create({
   addButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1e88e5', // Blue color
+    backgroundColor: '#1e88e5', 
     borderRadius: 50,
     width: 50,
     height: 50,

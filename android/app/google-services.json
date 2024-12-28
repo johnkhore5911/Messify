@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "877779679434",
+    "project_id": "messify-10bcf",
+    "storage_bucket": "messify-10bcf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:877779679434:android:f3c606b3e8b35d762b5c33",
+        "android_client_info": {
+          "package_name": "com.messifyapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnPCdrDhVoIve7z5_-IqfbWXoKR4l1SBs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -12,6 +12,9 @@ import {
 import { useRoute } from '@react-navigation/native'; // Import the useRoute hook
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
+import PushNotification from 'react-native-push-notification';
+import io from 'socket.io-client';
 
 const ServeMealPage = () => {
   const route = useRoute(); // Get route to access passed parameters
@@ -23,13 +26,19 @@ const ServeMealPage = () => {
   const [manualPrice, setManualPrice] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
 
-  // Function to handle adding a meal from the dropdown
+  const socket = io('http://192.168.18.235:3000', {
+    transports: ['websocket'],
+  });
+
+    socket.on('message', (data) => {
+      console.log("meal is confirmed and this message is send to messStaff")
+    });
+
   const handleAddMeal = (meal) => {
     setSelectedItems((prev) => [...prev, meal]);
     setTotalPrice((prev) => prev + parseInt(meal.price));
   };
 
-  // Function to handle adding a manual meal
   const handleAddManualMeal = () => {
     if (manualItem && manualPrice) {
       const newItem = { item: manualItem, price: parseInt(manualPrice) };
@@ -40,27 +49,39 @@ const ServeMealPage = () => {
     }
   };
 
-  // Function to handle deleting a meal
   const handleDeleteMeal = (index) => {
     const itemToDelete = selectedItems[index];
     setTotalPrice((prev) => prev - parseInt(itemToDelete.price));
     setSelectedItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+
   const handleConfirm = async () => {
+
+    if (totalPrice === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Meal Selection Error',
+        text2: 'Please select at least one meal to proceed.',
+        position: 'top',
+        visibilityTime: 3000,
+      });
+      return;
+    }
+  
     const output = {
-      totalBill:totalPrice,
+      totalBill: totalPrice,
       items: selectedItems,
-      rollNumber:student.rollNumber,
+      rollNumber: student.rollNumber,
     };
-    console.log("Output:",output);
-    
+  
+    console.log("Output:", output);
     try {
       const token = await AsyncStorage.getItem('token');
-      console.log("token: ",token);
+      console.log("token: ", token);
       const response = await axios.post(
-        'https://messify-backend.vercel.app/api/auth/updateBillAmountAndHistory',
-        output , 
+        'http://192.168.18.235:3000/trigger',
+        output,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -69,25 +90,65 @@ const ServeMealPage = () => {
         }
       );
   
-      if (response.status === 200) {
-        console.log("Response:", response.data.data.bill);
-        Alert.alert("Confirm Successfully!",`newBill:${response.data.data.bill}`);
-      } else {
+      console.log("response: ", response.data?.success);
+      if(response.status===200 && response.data?.success===false){
+        Alert.alert("Waiting...","Waiting for the Student to Confirm the Meal!");
+      }
+  
+      else if (response.status === 200 && response?.data?.messageData?.message2 ) {
+        Toast.show({
+          type: 'success',
+          text1: 'Confirmation Success',
+          position: 'top',
+          visibilityTime: 6500,
+        });
+        Alert.alert("Confirm Successfully!", `${response.data.messageData.message2}`);
+      } 
+      else {
         Alert.alert("Error", "Unable to update the bill amount. Please try again.");
       }
-    } catch (error) {
-      console.error("Error during POST request:", error);
-      Alert.alert("Error", "There was an issue confirming the data.");
+
+    } 
+    catch (error) {
+      if (error.response) {
+        if (error.response.status === 400) {
+          const errorMessage = error.response.data.message || "User security is locked";
+          Toast.show({
+            type: 'error',
+            text1: 'Error Meal Locked',
+            text2: errorMessage,
+            position: 'top',
+            visibilityTime: 6000,
+          });
+          Alert.alert("Error Meal Locked", errorMessage);
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: error.response.data.message || "An unexpected error occurred.",
+            position: 'top',
+            visibilityTime: 6000,
+          });
+        }
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Network Error',
+          text2: "There was an issue confirming the data. Please check your network connection.",
+          position: 'top',
+          visibilityTime: 6000,
+        });
+        Alert.alert("Error", "There was an issue confirming the data.");
+      }
     }
   };
 
+  
   return (
     <View style={styles.container}>
-      {/* Student Details */}
       <View style={styles.studentDetails}>
         <Image
           style={styles.image}
-          // source={{ uri: student.image }}
           source={{uri:"https://api.dicebear.com/5.x/initials/svg?seed=John"}}
           onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
         />
@@ -97,10 +158,8 @@ const ServeMealPage = () => {
         </View>
       </View>
 
-      {/* Dropdown Section */}
       <View style={styles.dropdownSection}>
         <ScrollView>
-          {/* {console.log("selectedItem:",selectedItems)} */}
           {selectedItems.map((item, index) => (
             <View key={index} style={styles.dropdownItem}>
               <Text style={styles.itemText}>
@@ -132,7 +191,6 @@ const ServeMealPage = () => {
         </ScrollView>
       </View>
 
-      {/* Manual Add Section */}
       <View style={styles.manualSection}>
         <Text style={styles.label}>Manual Add</Text>
         <View style={styles.manualInput}>
@@ -151,13 +209,12 @@ const ServeMealPage = () => {
             value={manualPrice}
             onChangeText={setManualPrice}
           />
-        </View>
         <TouchableOpacity style={styles.addButton} onPress={handleAddManualMeal}>
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Confirm Button */}
       <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
         <Text style={styles.confirmButtonText}>Confirm ₹{totalPrice}</Text>
       </TouchableOpacity>

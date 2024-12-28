@@ -1,25 +1,32 @@
 import React, { useState,useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput,Platform, Alert } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import axios from 'axios';  // Import axios for making API requests
+import axios from 'axios'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import io from 'socket.io-client';
+import PushNotification from 'react-native-push-notification';
+
 
 const MessStaffPage = ({ navigation }) => {
-  const [student, setStudent] = useState(null); // State to hold student data
-  const [searchQuery, setSearchQuery] = useState(''); // State to handle search input
-  const [loading, setLoading] = useState(false); // State to show loading indicator
-  const [error, setError] = useState(null); // State to hold error messages
-  const [messStaff, setMessStaff] = useState(null); // State to hold error messages
+  const [student, setStudent] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [messStaff, setMessStaff] = useState(null);
+  const [message, setMessage] = useState('');
+
+  const socket = io('http://192.168.18.235:3000', {
+    transports: ['websocket'],
+  });
+
 
   const getData = async () => {
     console.log("Getting data");
-    // setLoading(true);
-    // setError(null); // Reset any previous errors
     try {
       const token = await AsyncStorage.getItem('token');
       console.log("token: ",token);
-      const response = await axios.get("https://messify-backend.vercel.app/api/auth/getUserData", 
+      const response = await axios.get("http://192.168.18.235:3000/api/auth/getUserData", 
         {
             headers: {
                 'Content-Type': 'application/json',
@@ -27,10 +34,9 @@ const MessStaffPage = ({ navigation }) => {
             },
         });
   
-      // Assuming the data is in response.data.data
       if (response.data.success) {
         console.log("response.data.data: ",response.data.data);
-        setMessStaff(response.data.data); // Set student data from the response
+        setMessStaff(response.data.data);
         console.log("response.data.data.bill: ",response.data.data.bill);
       } else {
         setError('MessStaff not found');
@@ -40,9 +46,6 @@ const MessStaffPage = ({ navigation }) => {
       setError('Failed to fetch data. Please try again later.');
       console.log("Failed to fetch data. Please try again later.")
     } 
-    // finally {
-    //   setLoading(false); // Stop loading indicator
-    // }
   };
 
   useEffect(()=>{
@@ -50,17 +53,109 @@ const MessStaffPage = ({ navigation }) => {
   },[]);
 
 
-  // Re-fetch data when the screen is focused (e.g., after navigating back from TodayMealPage)
+
+  useEffect(() => {
+    const initializeSocket = async () => {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        socket.emit('register', token);
+      }
+    };
+
+    initializeSocket();
+    
+
+    // Push Notification configuration
+    PushNotification.configure({
+      onNotification: function (notification) {
+        console.log('Notification received:', notification);
+      },
+      requestPermissions: Platform.OS === 'ios',
+    });
+
+    // Ensure notification permissions for Android 13+
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+      PushNotification.requestPermissions()
+        .then((response) => {
+          console.log('Notification permission status:', response);
+        })
+        .catch((err) => {
+          console.log('Permission request failed:', err);
+        });
+    }
+
+    // Create a notification channel (required for Android 8+)
+    PushNotification.createChannel(
+      {
+        channelId: 'student-channel',
+        channelName: 'Student Notifications', 
+        channelDescription: 'Notifications for student updates', 
+        soundName: 'default', 
+        importance: 4, 
+        vibrate: true, 
+      },
+      (created) => console.log(`Channel created: ${created}`) 
+    );
+
+    socket.on('message', (data) => {
+      const { title, message } = data;
+
+      // Trigger a notification when a message is received
+      PushNotification.localNotification({
+        channelId: 'student-channel',
+        title: title,
+        message: message,
+        bigText: message,
+        color: 'blue',
+      });
+      if(title==="Meal Cancelled"){
+      Alert.alert("Meal Cancelled","Meal has been Cancelled by the Student.");
+      }
+      else{
+        Alert.alert("Successfully Confirmed!","Meal Confirmed by the Student!");
+      }
+
+      setMessage(message);
+      getData();
+    });
+
+    socket.on('MealUpdated', (messageData) => {
+      console.log("New meal update:", messageData);
+      const { title, message } = messageData;
+      console.log("MessageData: ",messageData);
+
+      // Trigger a notification when a message is received
+      PushNotification.localNotification({
+        channelId: 'student-channel',
+        title: title,
+        message: message,
+        bigText: message, 
+        color: 'blue',
+      });
+
+      setMessage(message);
+      getData();
+  });
+
+
+
+    // Clean up the connection when the component unmounts
+    return () => {
+    getData();
+      socket.disconnect();
+    };
+  }, []);
+
+
   useFocusEffect(
     React.useCallback(() => {
-      getData(); // Fetch data when the screen comes into focus
+      getData();
     }, [])
   );
   
 
   const handleAddMeal = () => {
-    // Redirect to Add Meal page
-    navigation.navigate('AddMealPage',{messNumber:messStaff.messNumber}); // Ensure 'AddMealPage' is registered in your navigation
+    navigation.navigate('AddMealPage',{messNumber:messStaff.messNumber}); 
   };
 
   const handleSearch = async () => {
@@ -70,13 +165,13 @@ const MessStaffPage = ({ navigation }) => {
     }
 
     setLoading(true);
-    setError(null); // Reset any previous errors
+    setError(null); 
     console.log("search query:",searchQuery)
     console.log(typeof(searchQuery));
     const token = await AsyncStorage.getItem('token');
     console.log("token: ",token);
     try {
-      const response = await axios.post("https://messify-backend.vercel.app/api/auth/getUserDataByRoll", 
+      const response = await axios.post("http://192.168.18.235:3000/api/auth/getUserDataByRoll", 
         {
           rollNumber: searchQuery
         },
@@ -88,9 +183,8 @@ const MessStaffPage = ({ navigation }) => {
         });
       console.log("response.data: ", response.data);
   
-      // Assuming the data is in response.data.data
       if (response.data.success) {
-        setStudent(response.data.data); // Set student data from the response
+        setStudent(response.data.data); 
       } else {
         setError('Student not found');
       }
@@ -98,7 +192,7 @@ const MessStaffPage = ({ navigation }) => {
       setError('Failed to fetch data. Please try again later.');
       console.log("Failed to fetch data. Please try again later.")
     } finally {
-      setLoading(false); // Stop loading indicator
+      setLoading(false); 
     }
   };
 
@@ -108,7 +202,7 @@ const MessStaffPage = ({ navigation }) => {
     console.log("Item Name: ",itemName)
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await axios.delete(`https://messify-backend.vercel.app/api/auth/deleteTodaysMealItem/${itemId}/${itemName}`, 
+      const response = await axios.delete(`http://192.168.18.235:3000/api/auth/deleteTodaysMealItem/${itemId}/${itemName}`, 
         {
           headers: {
             'Content-Type': 'application/json',
@@ -117,8 +211,6 @@ const MessStaffPage = ({ navigation }) => {
         });
         
       if (response.data.success) {
-
-        // Update the meal items in the state
         setMessStaff(prevState => {
           const updatedMeals = prevState.todaysMeal.filter(item => item.item !== item);
           return { ...prevState, todaysMeal: updatedMeals };
@@ -135,25 +227,11 @@ const MessStaffPage = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <Text style={styles.header}>Mess Staff</Text>
 
-      {/* Add Today's Meal Button */}
       <TouchableOpacity style={styles.addMealButton} onPress={handleAddMeal}>
         <Text style={styles.addMealButtonText}>Add Today's Meal</Text>
       </TouchableOpacity>
-
-            {/* Today's Meal Section */}
-      {/* <View style={styles.mealContainer}>
-            <Text style={styles.mealHeader}>Today's Meal</Text>
-            <View>
-              {messStaff?.todaysMeal && messStaff?.todaysMeal.map((item, index) => (
-                <Text key={index} style={styles.mealText}>
-                  {item.item} - ₹{item.price}
-                </Text>
-              ))}
-            </View>
-      </View> */}
       
       <View style={styles.mealContainer}>
         <Text style={styles.mealHeader}>Today's Meal</Text>
@@ -169,7 +247,6 @@ const MessStaffPage = ({ navigation }) => {
           ))}
         </View>
 
-      {/* Search Student Section */}
       <View style={styles.searchContainer}>
         <Text style={styles.searchLabel}>Search Student</Text>
         <View style={styles.searchInputContainer}>
@@ -178,7 +255,7 @@ const MessStaffPage = ({ navigation }) => {
             placeholder="Roll Number"
             placeholderTextColor="#aaa"
             value={searchQuery}
-            onChangeText={setSearchQuery} // Update search query on input change
+            onChangeText={setSearchQuery} 
           />
           <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
             <Text style={styles.searchButtonText}>Search</Text>
@@ -186,13 +263,10 @@ const MessStaffPage = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Loading Spinner */}
       {loading && <Text style={styles.loadingText}>Loading...</Text>}
 
-      {/* Error Message */}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      {/* Display Student Information if available */}
       {student && (
         <TouchableOpacity style={styles.studentInfoContainer} onPress={()=> navigation.navigate("ServeMealPage",{student})}>
           <Text style={styles.studentName}>{student.name}</Text>
@@ -214,14 +288,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#121212', // Blackish background
+    backgroundColor: '#121212', 
   },
   header: {
     fontSize: 26,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    // marginVertical: 20,
   },
   addMealButton: {
     width: '100%',

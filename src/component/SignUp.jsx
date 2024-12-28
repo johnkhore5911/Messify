@@ -2,17 +2,20 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet,Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import Toast from 'react-native-toast-message';
 
 const SignUpPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState(''); // Role: "Mess" or "Student"
+  const [role, setRole] = useState(''); 
   const [messNumber, setMessNumber] = useState('');
   const [hostelNumber, setHostelNumber] = useState('');
   const [roomDetails, setRoomDetails] = useState('');
   const [rollNumber, setRollNumber] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+
 
   const handleSignUp = async() => {
     const data = {
@@ -23,20 +26,35 @@ const SignUpPage = () => {
       ...(role === 'Mess' && { messNumber }),
       ...(role === 'Student' && { hostelNumber, roomDetails, rollNumber }),
     };
-    console.log('Sign-Up Data:', data);
-
+    setLoading(true);
     try {
-      const response = await axios.post('https://messify-backend.vercel.app/api/auth/register', data);
+      
+      const response = await axios.post('http://192.168.18.235:3000/api/auth/register', data);
       if (response.data.success) {
-        Alert.alert('Sign Up Successful', 'You can now log in!')
-
+        Toast.show({
+          type: 'success',
+          text1: 'Sign Up Successful',
+          text2: 'You can now log in!',
+          visibilityTime: 3000, 
+        });
         navigation.navigate("Login");
       } else {
-        Alert.alert('Sign Up Failed', response.data.message || 'An error occurred');
+        Toast.show({
+          type: 'error',
+          text1: 'Sign Up Failed',
+          text2: response.data.message || 'An error occurred',
+        });
       }
     } catch (error) {
       console.error('Error during sign up', error);
-      Alert.alert('Sign Up Failed', 'An error occurred during sign up');
+      Toast.show({
+        type: 'error',
+        text1: 'Sign Up Failed',
+        text2: 'An error occurred during sign up' || 'An error occurred',
+      });
+    }
+    finally{
+      setLoading(false);
     }
   };
 
@@ -91,6 +109,7 @@ const SignUpPage = () => {
           placeholderTextColor="#777"
           value={messNumber}
           onChangeText={setMessNumber}
+          keyboardType="numeric"
         />
       )}
 
@@ -102,6 +121,7 @@ const SignUpPage = () => {
             placeholderTextColor="#777"
             value={hostelNumber}
             onChangeText={setHostelNumber}
+            keyboardType="numeric"
           />
           <TextInput
             style={styles.input}
@@ -116,12 +136,13 @@ const SignUpPage = () => {
             placeholderTextColor="#777"
             value={rollNumber}
             onChangeText={setRollNumber}
+            keyboardType="numeric"
           />
         </>
       )}
 
-      <TouchableOpacity style={styles.button} onPress={handleSignUp}>
-        <Text style={styles.buttonText}>Sign Up</Text>
+      <TouchableOpacity style={[styles.button, loading && styles.buttonLoading]} onPress={handleSignUp} disabled={loading}>
+        <Text style={styles.buttonText}>{loading ? 'Signing Up...' : 'Sign Up'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.linkContainer} onPress={() => navigation.navigate('Login')}>
@@ -208,6 +229,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  buttonLoading: {
+    backgroundColor: '#4e2cbf', 
   },
 });
 
